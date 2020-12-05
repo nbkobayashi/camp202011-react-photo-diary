@@ -17,6 +17,9 @@ import Icon from "react-native-vector-icons/FontAwesome";
 import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 import * as ImagePicker from "expo-image-picker";
 import * as FileSystem from "expo-file-system";
+import moment from "moment";
+import * as MediaLibrary from "expo-media-library";
+import { savePictureInfoAsync } from "./Store";
 
 type Props = {
   navigation: StackNavigationProp<RootStackParamList, "Add">;
@@ -48,6 +51,36 @@ export default function AddScreen({ navigation }: Props) {
       }
     };
   }, []);
+
+  const saveAsync = async () => {
+    // タイトルが設定されていないとアラート
+    if (titleText === "") {
+      alert("タイトルを入力してください");
+      return;
+    }
+    // タイトルが設定されていないとアラート
+    if (pictureURI === "") {
+      alert("写真が有りません");
+      return;
+    }
+
+    // カメラロールへ画像を保存
+    const asset = await MediaLibrary.createAssetAsync(pictureURI);
+
+    // ストレージの画像リストに追加
+    const newPictureInfo: PictureInfo = {
+      title: titleText,
+      uri: asset.uri,
+      createdAt: moment.now()
+    };
+    await savePictureInfoAsync(newPictureInfo);
+
+    // キャッシュを削除
+    FileSystem.deleteAsync(pictureURI);
+
+    // Homeへ
+    navigation.goBack();
+  };
 
   const Preview = () => {
     return <Image style={styles.preview} source={{ uri: pictureURI }} />;
@@ -81,7 +114,17 @@ export default function AddScreen({ navigation }: Props) {
         <View style={styles.previewContainer}>
           {pictureURI ? <Preview /> : <Camera />}
         </View>
-        <Button title="to HomeScreen" onPress={() => navigation.goBack()} />
+        <View style={styles.buttonContainer}>
+          <TouchableOpacity style={styles.saveButton} onPress={saveAsync}>
+            <Text style={styles.buttonText}>保存</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.cancelButton}
+            onPress={() => navigation.goBack()}
+          >
+            <Text style={styles.buttonText}>キャンセル</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     </KeyboardAwareScrollView>
   );
@@ -124,5 +167,29 @@ const styles = StyleSheet.create({
   preview: {
     width: screenWidth * 0.8,
     height: (screenWidth * 0.8 * 4) / 3
+  },
+  buttonContainer: {
+    flex: 1,
+    flexDirection: "row",
+    justifyContent: "space-around",
+    alignItems: "center",
+    width: "100%"
+  },
+  saveButton: {
+    backgroundColor: "#77f",
+    padding: 5,
+    borderRadius: 10,
+    width: 120,
+    alignItems: "center"
+  },
+  cancelButton: {
+    backgroundColor: "#f77",
+    padding: 5,
+    borderRadius: 10,
+    width: 120,
+    alignItems: "center"
+  },
+  buttonText: {
+    fontSize: 20
   }
 });
