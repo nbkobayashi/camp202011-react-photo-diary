@@ -39,7 +39,7 @@ export default function HomeScreen({ navigation }: Props) {
   // 画像リストをストレージから読み込み、更新する
   const updatePictureInfoListAsync = async () => {
     const newPictureInfoList = await loadPictureInfoListAsync();
-    setPictureInfoList(newPictureInfoList);
+    setPictureInfoList(newPictureInfoList.reverse());
   };
 
   // 初期化処理
