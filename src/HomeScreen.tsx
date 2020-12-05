@@ -7,14 +7,18 @@ import {
   Text,
   View,
   FlatList,
-  Dimensions
+  ListRenderItemInfo,
+  Dimensions,
+  TouchableOpacity,
+  Alert
 } from "react-native";
 
+import Icon from "react-native-vector-icons/FontAwesome";
 import { StackNavigationProp } from "@react-navigation/stack";
 import * as ImagePicker from "expo-image-picker";
 
 import { useFocusEffect } from "@react-navigation/native";
-import { loadPictureInfoListAsync } from "./Store";
+import { loadPictureInfoListAsync, removePictureInfoAsync } from "./Store";
 import moment from "moment";
 
 const screenWidth = Math.round(Dimensions.get("window").width);
@@ -54,25 +58,58 @@ export default function HomeScreen({ navigation }: Props) {
     }, [])
   );
 
+  // 画像情報の削除処理 + 画面更新
+  const removePictureInfoAndUpdateAsync = async (pictureInfo: PictureInfo) => {
+    await removePictureInfoAsync(pictureInfo);
+    updatePictureInfoListAsync();
+  };
+
+  const handleAddButton = () => {
+    navigation.navigate("Add");
+  };
+
+  // 写真を長押ししたときの処理
+  const handleLongPressPicture = (item: PictureInfo) => {
+    Alert.alert(item.title, "この写真の削除ができます。", [
+      {
+        text: "キャンセル",
+        style: "cancel"
+      },
+      {
+        text: "削除",
+        onPress: () => {
+          removePictureInfoAndUpdateAsync(item);
+        }
+      }
+    ]);
+  };
+
   const renderPictureInfo = ({ item }: ListRenderItemInfo<PictureInfo>) => {
     return (
-      <View style={styles.pictureInfoContainer}>
-        <Text style={styles.pictureTitle}>{item.title}</Text>
-        <Image style={styles.picture} source={{ uri: item.uri }} />
-        <Text style={styles.timestamp}>
-          撮影日時: {moment(item.createdAt).format("YYYY/MM/DD HH:mm:ss")}
-        </Text>
-      </View>
+      <TouchableOpacity onLongPress={() => handleLongPressPicture(item)}>
+        <View style={styles.pictureInfoContainer}>
+          <Text style={styles.pictureTitle}>{item.title}</Text>
+          <Image style={styles.picture} source={{ uri: item.uri }} />
+          <Text style={styles.timestamp}>
+            撮影日時: {moment(item.createdAt).format("YYYY/MM/DD HH:mm:ss")}
+          </Text>
+        </View>
+      </TouchableOpacity>
     );
   };
 
   const PictureDiaryList = () => {
     return (
-      <FlatList
-        data={pictureInfoList}
-        renderItem={renderPictureInfo}
-        keyExtractor={item => `${item.createdAt}`}
-      />
+      <View style={{ flex: 1 }}>
+        <FlatList
+          data={pictureInfoList}
+          renderItem={renderPictureInfo}
+          keyExtractor={item => `${item.createdAt}`}
+        />
+        <TouchableOpacity style={styles.addButton} onPress={handleAddButton}>
+          <Icon style={styles.addButtonIcon} name="plus" size={50} />
+        </TouchableOpacity>
+      </View>
     );
   };
 
@@ -86,12 +123,6 @@ export default function HomeScreen({ navigation }: Props) {
       {!hasPermission && <UnPermission />}
       {/* 権限が有った時 */}
       {hasPermission && <PictureDiaryList />}
-      {hasPermission && (
-        <Button
-          title="to AddScreen"
-          onPress={() => navigation.navigate("Add")}
-        />
-      )}
       <StatusBar style="auto" />
     </View>
   );
@@ -100,6 +131,7 @@ export default function HomeScreen({ navigation }: Props) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    flexDirection: "row",
     backgroundColor: "#fff",
     alignItems: "center",
     justifyContent: "center"
@@ -124,5 +156,19 @@ const styles = StyleSheet.create({
   },
   timestamp: {
     fontSize: 15
+  },
+  addButton: {
+    position: "absolute",
+    right: 10,
+    bottom: 10,
+    backgroundColor: "#77f",
+    width: 70,
+    height: 70,
+    borderRadius: 40,
+    alignItems: "center",
+    justifyContent: "center"
+  },
+  addButtonIcon: {
+    color: "#fff"
   }
 });
